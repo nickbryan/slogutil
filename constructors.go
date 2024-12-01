@@ -1,3 +1,4 @@
+// Package slogutil provides constructors for the slogctx and slogmem packages.
 package slogutil
 
 import (
@@ -15,7 +16,7 @@ func NewJSONLogger(options ...Option) *slog.Logger {
 	jsonHandler := slog.NewJSONHandler(opts.writer, &slog.HandlerOptions{
 		AddSource: opts.addSource,
 		Level:     opts.level,
-		ReplaceAttr: func(groups []string, attr slog.Attr) slog.Attr {
+		ReplaceAttr: func(_ []string, attr slog.Attr) slog.Attr {
 			if opts.now != nil && attr.Key == slog.TimeKey {
 				attr.Value = slog.TimeValue(opts.now())
 			}

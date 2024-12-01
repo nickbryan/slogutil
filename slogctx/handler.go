@@ -1,3 +1,4 @@
+// Package slogctx provides a context aware [slog.Handler].
 package slogctx
 
 import (
@@ -8,7 +9,7 @@ import (
 	"github.com/nickbryan/slogutil/internal"
 )
 
-// This Handler extracts attributes from a [context.Context] where they have been
+// Handler extracts attributes from a [context.Context] where they have been
 // added via the functions [WithRootAttrs] or [WithAttrs]. All extracted attributes
 // will be passed to the embedded [slog.Handler] for further processing.
 type Handler struct {
@@ -20,7 +21,7 @@ type Handler struct {
 }
 
 // Ensure that our [Handler] implements the [slog.Handler] interface.
-var _ slog.Handler = &Handler{}
+var _ slog.Handler = &Handler{} //nolint:exhaustruct // Compile time implementation check.
 
 // NewHandler creates a new Handler that extracts attributes from
 // [context.Context] where they have been added via the functions

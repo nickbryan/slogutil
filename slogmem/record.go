@@ -60,7 +60,7 @@ func NewLoggedRecords(records []LoggedRecord) *LoggedRecords {
 	}
 }
 
-// The Contains method can be used to check if a LoggedRecords contains a
+// Contains can be used to check if a LoggedRecords contains a
 // [LoggedRecord] that matches the details in the given [RecordQuery].
 //
 // Contains returns true for the first record that fully matches the given

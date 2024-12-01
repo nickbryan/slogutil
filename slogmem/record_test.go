@@ -19,11 +19,11 @@ func TestLoggedRecordsAsSliceOfNestedKeyValuePairs(t *testing.T) {
 		records []slogmem.LoggedRecord
 		want    []map[string]any
 	}{
-		"calling AsSliceOfNestedKeyValuePairs on an empty LoggedRecords initialised with nil returns an empty slice": {
+		"calling AsSliceOfNestedKeyValuePairs on an empty LoggedRecords initialized with nil returns an empty slice": {
 			records: nil,
 			want:    []map[string]any{},
 		},
-		"calling AsSliceOfNestedKeyValuePairs on an empty LoggedRecords initialised with an empty slice returns an empty slice": {
+		"calling AsSliceOfNestedKeyValuePairs on an empty LoggedRecords initialized with an empty slice returns an empty slice": {
 			records: []slogmem.LoggedRecord{},
 			want:    []map[string]any{},
 		},

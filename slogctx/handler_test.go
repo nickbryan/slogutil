@@ -53,10 +53,10 @@ type erroringHandler struct {
 	err error
 }
 
-func (e erroringHandler) Enabled(context.Context, slog.Level) bool  { return true }
-func (e erroringHandler) Handle(context.Context, slog.Record) error { return e.err }
-func (e erroringHandler) WithAttrs(attrs []slog.Attr) slog.Handler  { panic("unimplemented") }
-func (e erroringHandler) WithGroup(name string) slog.Handler        { panic("unimplemented") }
+func (e erroringHandler) Enabled(_ context.Context, _ slog.Level) bool  { return true }
+func (e erroringHandler) Handle(_ context.Context, _ slog.Record) error { return e.err }
+func (e erroringHandler) WithAttrs(_ []slog.Attr) slog.Handler          { panic("unimplemented") }
+func (e erroringHandler) WithGroup(_ string) slog.Handler               { panic("unimplemented") }
 
 func TestHandlerReturnsErrorWhentheWrappedHandlerErrors(t *testing.T) {
 	t.Parallel()

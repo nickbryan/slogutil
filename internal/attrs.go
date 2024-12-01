@@ -1,3 +1,4 @@
+// Package internal encapsulates attribute handling code shared by the exported packages.
 package internal
 
 import (
@@ -130,17 +131,12 @@ func (agh *AttrGroupHistory) resolve() []slog.Attr {
 	}
 
 	key := agh.groups[0].name
-
 	pathWithKey := groupPath(agh.groups[0].path, key)
-	if _, ok := agh.duplicateAttrKeys[pathWithKey]; ok {
-		agh.duplicateAttrKeys[pathWithKey]++
-		key = duplicateKey(key, agh.duplicateAttrKeys[pathWithKey])
-	} else {
-		agh.duplicateAttrKeys[pathWithKey] = 0
-	}
+
+	agh.trackKey(pathWithKey)
 
 	return []slog.Attr{{
-		Key:   key,
+		Key:   agh.deduplicatedKey(key, pathWithKey),
 		Value: slog.GroupValue(resolvedAttrs...),
 	}}
 }
@@ -157,24 +153,18 @@ func (agh *AttrGroupHistory) resolveAttrs(path string, attrs []slog.Attr) []slog
 	resolvedAttrs := make([]slog.Attr, 0, len(attrs))
 
 	for _, attr := range attrs {
-		if attr.Equal(slog.Attr{}) {
+		if attrIsEmpty(attr) {
 			continue
 		}
 
+		pathWithKey := groupPath(path, attr.Key)
+
+		agh.trackKey(pathWithKey)
+
 		attr.Value = attr.Value.Resolve()
 
-		pathWithKey := groupPath(path, attr.Key)
-		if _, ok := agh.duplicateAttrKeys[pathWithKey]; ok {
-			agh.duplicateAttrKeys[pathWithKey]++
-		} else {
-			agh.duplicateAttrKeys[pathWithKey] = 0
-		}
-
 		if attr.Value.Kind() != slog.KindGroup {
-			if agh.duplicateAttrKeys[pathWithKey] > 0 {
-				attr.Key = duplicateKey(attr.Key, agh.duplicateAttrKeys[pathWithKey])
-			}
-
+			attr.Key = agh.deduplicatedKey(attr.Key, pathWithKey)
 			resolvedAttrs = append(resolvedAttrs, attr)
 
 			continue
@@ -185,20 +175,47 @@ func (agh *AttrGroupHistory) resolveAttrs(path string, attrs []slog.Attr) []slog
 			continue
 		}
 
-		if len(attr.Value.Group()) == 0 {
+		if attrGroupIsEmpty(attr) {
 			continue
 		}
 
-		if agh.duplicateAttrKeys[pathWithKey] > 0 {
-			attr.Key = duplicateKey(attr.Key, agh.duplicateAttrKeys[pathWithKey])
-			pathWithKey = duplicateKey(pathWithKey, agh.duplicateAttrKeys[pathWithKey])
-		}
+		attr.Key = agh.deduplicatedKey(attr.Key, pathWithKey)
+		pathWithKey = agh.deduplicatedKey(pathWithKey, pathWithKey)
 
 		groupedAttrs := agh.resolveAttrs(pathWithKey, attr.Value.Group())
 		resolvedAttrs = append(resolvedAttrs, slog.Attr{Key: attr.Key, Value: slog.GroupValue(groupedAttrs...)})
 	}
 
 	return resolvedAttrs
+}
+
+// trackKey increments the counter for the key if set or initializes it to zero.
+func (agh *AttrGroupHistory) trackKey(key string) {
+	if _, ok := agh.duplicateAttrKeys[key]; ok {
+		agh.duplicateAttrKeys[key]++
+	} else {
+		agh.duplicateAttrKeys[key] = 0
+	}
+}
+
+// deduplicatedKey returns the key if it is the first occurrence or marks it as a duplicate otherwise.
+func (agh *AttrGroupHistory) deduplicatedKey(key, pathWithKey string) string {
+	if agh.duplicateAttrKeys[pathWithKey] == 0 {
+		return key
+	}
+
+	return fmt.Sprintf("%s#%02d", key, agh.duplicateAttrKeys[pathWithKey])
+}
+
+func attrIsEmpty(attr slog.Attr) bool {
+	return attr.Equal(slog.Attr{
+		Key:   "",
+		Value: slog.Value{},
+	})
+}
+
+func attrGroupIsEmpty(attr slog.Attr) bool {
+	return len(attr.Value.Group()) == 0
 }
 
 func groupPath(path, key string) string {
@@ -209,8 +226,4 @@ func groupPath(path, key string) string {
 	}
 
 	return strings.TrimLeft(path+delimiter+key, delimiter)
-}
-
-func duplicateKey(key string, duplicates int) string {
-	return fmt.Sprintf("%s#%02d", key, duplicates)
 }

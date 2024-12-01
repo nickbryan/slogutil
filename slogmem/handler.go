@@ -8,7 +8,7 @@ import (
 	"github.com/nickbryan/slogutil/internal"
 )
 
-// This Handler captures records produced by a call to Handle in-memory so that they can be
+// Handler captures records produced by a call to Handle in-memory so that they can be
 // accessed via [LoggedRecords] later for inspection.
 type Handler struct {
 	persistentAttrs internal.AttrGroupTree
@@ -17,7 +17,7 @@ type Handler struct {
 }
 
 // Ensure that our [Handler] implements the [slog.Handler] interface.
-var _ slog.Handler = &Handler{}
+var _ slog.Handler = &Handler{} //nolint:exhaustruct // Compile type implementation check.
 
 // NewHandler creates a new in-memory Handler that captures log records which have a
 // level greater than or equal to the current level of the given leveler.

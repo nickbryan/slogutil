@@ -33,7 +33,7 @@ func TestHandlerSatisfiesSlogTestHarness(t *testing.T) {
 		records := handler.Records().AsSliceOfNestedKeyValuePairs()
 
 		for _, record := range records {
-			// unexpected key "time": a Handler should ignore a zero Record.Time
+			// Unexpected key "time": a Handler should ignore a zero Record.Time
 			//
 			// The testing/slogtest harness executes the above assertion. We want to ensure
 			// that we capture zero time for debugging purposes when the in memory Handler is
