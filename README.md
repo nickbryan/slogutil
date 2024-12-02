@@ -1,5 +1,5 @@
 <div align="center">
-    ![Coverage](https://raw.githubusercontent.com/org/project/badges/.badges/main/coverage.svg)
+    ![Coverage](https://raw.githubusercontent.com/nickbryan/slogutil/badges/.badges/main/coverage.svg)
 </div>
 
 # slogutil
