@@ -4,6 +4,7 @@ context integration and testability.
 
 <div align="center">
 
+[![Test](https://github.com/nickbryan/slogutil/actions/workflows/test.yml/badge.svg)](https://github.com/nickbryan/slogutil/actions)
 [![Coverage](https://raw.githubusercontent.com/nickbryan/slogutil/badges/.badges/main/coverage.svg)](https://github.com/nickbryan/slogutil/actions)
 [![Go Report Card](https://goreportcard.com/badge/nickbryan/slogutil)](https://goreportcard.com/report/nickbryan/slogutil)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nickbryan/slogutil/blob/master/LICENSE)
