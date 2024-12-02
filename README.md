@@ -1,5 +1,7 @@
 <div align="center">
-    ![Coverage](https://raw.githubusercontent.com/nickbryan/slogutil/badges/.badges/main/coverage.svg)
+    [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/nickbryan/slogutil/blob/master/LICENSE)
+    [![Coverage](https://raw.githubusercontent.com/nickbryan/slogutil/badges/.badges/main/coverage.svg)](https://github.com/nickbryan/slogutil/actions)
+    [![Go Report Card](https://goreportcard.com/badge/nickbryan/slogutil)](https://goreportcard.com/report/nickbryan/slogutil)
 </div>
 
 # slogutil
