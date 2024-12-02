@@ -1,4 +1,6 @@
 # slogutil
+Package `slogutil` provides enhanced logging capabilities for the standard library `log/slog` package, focusing on
+context integration and testability.
 
 <div align="center">
 
@@ -7,9 +9,6 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nickbryan/slogutil/blob/master/LICENSE)
 
 </div>
-
-Package `slogutil` provides enhanced logging capabilities for the standard library `log/slog` package, focusing on
-context integration and testability.
 
 ## Features
 * **Context-Aware Logging:**  Enriches log records with contextual information from `context.Context`:
