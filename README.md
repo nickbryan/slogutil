@@ -1,3 +1,7 @@
+<div align="center">
+    ![Coverage](https://raw.githubusercontent.com/org/project/badges/.badges/main/coverage.svg)
+</div>
+
 # slogutil
 Package `slogutil` provides enhanced logging capabilities for the standard library `log/slog` package, focusing on
 context integration and testability.
