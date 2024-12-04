@@ -104,6 +104,11 @@ func (lr *LoggedRecords) Contains(query RecordQuery) (bool, string) {
 	return false, diff
 }
 
+// IsEmpty returns true when no records have been captured.
+func (lr *LoggedRecords) IsEmpty() bool {
+	return len(lr.records) == 0
+}
+
 // AsSliceOfNestedKeyValuePairs flattens the LoggedRecords so that they can be
 // accessed as a series of key value pair objects representing each recorded log.
 //
