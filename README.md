@@ -53,13 +53,13 @@ func TestThing(t *testing.T) {
 	ctx := slogctx.WithPrependAttrs(context.Background(), slog.String("prepend_attribute", "prepend_value"))
 	ctx = slogctx.WithAppendAttrs(ctx, slog.String("append_attribute", "append_value"))
 
-	logger, records := slogutil.NewInMemoryLogger(slog.LevelDebug)
+	logger, logs := slogutil.NewInMemoryLogger(slog.LevelDebug)
 	logger = logger.With(slog.Int("my_root_attribute", 123))
 	logger = logger.WithGroup("my_group")
 
 	logger.InfoContext(ctx, "Info log message", slog.String("my_grouped_attribute", "my_value"))
 
-	if ok, diff := records.Contains(slogmem.RecordQuery{
+	if ok, diff := logs.Contains(slogmem.RecordQuery{
 		Level:   slog.LevelInfo,
 		Message: "Info log message",
 		Attrs: map[string]slog.Value{
