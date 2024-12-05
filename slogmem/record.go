@@ -104,9 +104,9 @@ func (lr *LoggedRecords) Contains(query RecordQuery) (bool, string) {
 	return false, diff
 }
 
-// IsEmpty returns true when no records have been captured.
-func (lr *LoggedRecords) IsEmpty() bool {
-	return len(lr.records) == 0
+// Len returns the number of records that have been captured.
+func (lr *LoggedRecords) Len() int {
+	return len(lr.records)
 }
 
 // AsSliceOfNestedKeyValuePairs flattens the LoggedRecords so that they can be
