@@ -476,3 +476,44 @@ func TestLoggedRecordsLen(t *testing.T) {
 		})
 	}
 }
+
+func TestLoggedRecordsIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		records []slogmem.LoggedRecord
+		want    bool
+	}{
+		"returns true when logged records is nil": {
+			records: nil,
+			want:    true,
+		},
+		"returns true when logged records is empty": {
+			records: []slogmem.LoggedRecord{},
+			want:    true,
+		},
+		"returns false when logged records is not empty": {
+			records: []slogmem.LoggedRecord{
+				{
+					Time:    time.Now(),
+					Level:   slog.LevelInfo,
+					Message: "some message",
+					Attrs:   []slog.Attr{},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := slogmem.NewLoggedRecords(tc.records).IsEmpty()
+
+			if got != tc.want {
+				t.Errorf("slogmem.NewLoggedRecords(%+v).IsEmpty() did not return %t", tc.records, tc.want)
+			}
+		})
+	}
+}
