@@ -221,6 +221,57 @@ func cmpOpts() []cmp.Option {
 		cmpopts.IgnoreMapEntries(func(k string, _ any) bool {
 			return k == slog.TimeKey
 		}),
-		cmpopts.EquateErrors(),
+		cmp.FilterValues(areConcreteErrors, cmp.Comparer(compareErrorStrings)),
+		cmp.FilterValues(isStringAndError, cmp.Comparer(compareStringAndError)),
 	}
+}
+
+// areConcreteErrors reports whether x and y are types that implement error.
+// The input types are deliberately of the interface{} type rather than the
+// error type so that we can handle situations where the current type is an
+// interface{}, but the underlying concrete types both happen to implement
+// the error interface.
+func areConcreteErrors(x, y interface{}) bool {
+	_, ok1 := x.(error)
+	_, ok2 := y.(error)
+
+	return ok1 && ok2
+}
+
+// compareErrorStrings is used to compare the strings of the errors rather than the types.
+// cmp.Diff will produce a value if two errors are logged with the same type but their
+// memory address is different (different instances).
+func compareErrorStrings(x, y any) bool {
+	xAsErr, _ := x.(error)
+	yAsErr, _ := y.(error)
+
+	return xAsErr.Error() == yAsErr.Error()
+}
+
+// isStringAndError reports whether x is a string and y is an error, or vice versa.
+func isStringAndError(x, y any) bool {
+	_, xIsString := x.(string)
+	_, yIsString := y.(string)
+	_, xIsError := x.(error)
+	_, yIsError := y.(error)
+
+	return (xIsString && yIsError) || (yIsString && xIsError)
+}
+
+// compareStringAndError compares a string to an error's Error() string.
+func compareStringAndError(x, y any) bool {
+	var (
+		str string
+		err error
+	)
+
+	if s, ok := x.(string); ok {
+		str = s
+		err, _ = y.(error)
+	} else {
+		str, _ = y.(string)
+		err, _ = x.(error)
+	}
+
+	return str == err.Error()
 }

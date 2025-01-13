@@ -1,6 +1,8 @@
 package slogmem_test
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"testing"
 	"time"
@@ -9,6 +11,16 @@ import (
 
 	"github.com/nickbryan/slogutil/slogmem"
 )
+
+type logValuerStubError struct {
+	I int
+	S string
+}
+
+func (e *logValuerStubError) Error() string { return "some error from logValuerStubError" }
+func (e *logValuerStubError) LogValue() slog.Value {
+	return slog.GroupValue(slog.Int("i", e.I), slog.String("s", e.S))
+}
 
 func TestLoggedRecordsAsSliceOfNestedKeyValuePairs(t *testing.T) {
 	t.Parallel()
@@ -407,6 +419,60 @@ func TestLoggedRecordsContains(t *testing.T) {
 			},
 			want: false,
 		},
+		"true is returned when errors logged as attributes using slog.Any are compared with a standard error": {
+			records: []slogmem.LoggedRecord{
+				{
+					Time:    time.Now(),
+					Level:   slog.LevelInfo,
+					Message: "some message",
+					Attrs:   []slog.Attr{slog.Any("error", &logValuerStubError{})},
+				},
+			},
+			query: slogmem.RecordQuery{
+				Level:   slog.LevelInfo,
+				Message: "some message",
+				Attrs: map[string]slog.Value{
+					"error": slog.AnyValue(errors.New("some error from logValuerStubError")),
+				},
+			},
+			want: true,
+		},
+		"true is returned when errors logged as attributes using slog.Any are compared with an error type": {
+			records: []slogmem.LoggedRecord{
+				{
+					Time:    time.Now(),
+					Level:   slog.LevelInfo,
+					Message: "some message",
+					Attrs:   []slog.Attr{slog.Any("error", &logValuerStubError{I: 123})},
+				},
+			},
+			query: slogmem.RecordQuery{
+				Level:   slog.LevelInfo,
+				Message: "some message",
+				Attrs: map[string]slog.Value{
+					"error": slog.AnyValue(&logValuerStubError{I: 456}),
+				},
+			},
+			want: true,
+		},
+		"true is returned when errors logged as attributes using slog.Any are compared with a string": {
+			records: []slogmem.LoggedRecord{
+				{
+					Time:    time.Now(),
+					Level:   slog.LevelInfo,
+					Message: "some message",
+					Attrs:   []slog.Attr{slog.Any("error", errors.New("some error"))},
+				},
+			},
+			query: slogmem.RecordQuery{
+				Level:   slog.LevelInfo,
+				Message: "some message",
+				Attrs: map[string]slog.Value{
+					"error": slog.AnyValue("some error"),
+				},
+			},
+			want: true,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -515,5 +581,30 @@ func TestLoggedRecordsIsEmpty(t *testing.T) {
 				t.Errorf("slogmem.NewLoggedRecords(%+v).IsEmpty() did not return %t", tc.records, tc.want)
 			}
 		})
+	}
+}
+
+func TestHandlerRespectsCastingLogValuerWhenTestingErrors(t *testing.T) {
+	t.Parallel()
+
+	handler := slogmem.NewHandler(slog.LevelDebug)
+	logger := slog.New(handler)
+
+	logger.ErrorContext(context.Background(), "Something happened", slog.Any("error", &logValuerStubError{
+		I: 123,
+		S: "some value",
+	}))
+
+	query := slogmem.RecordQuery{
+		Level:   slog.LevelError,
+		Message: "Something happened",
+		Attrs: map[string]slog.Value{
+			"error.i": slog.IntValue(123),
+			"error.s": slog.StringValue("some value"),
+		},
+	}
+
+	if ok, diff := handler.Records().Contains(query); !ok {
+		t.Errorf("handler does not respect slog.LogValuer casting, diff:\n%s", diff)
 	}
 }

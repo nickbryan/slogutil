@@ -29,3 +29,6 @@ lint: ##@Test
 
 lint-fix: ##@Test
 	@make lint args="--fix"
+
+test: ##@Test
+	go test -count=1 ./...
