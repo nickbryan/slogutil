@@ -31,6 +31,7 @@ func TestHandlerafterSatisfiesSlogTestHarnessWhenActingAsLogMiddleware(t *testin
 			t.Parallel()
 
 			var buf bytes.Buffer
+
 			h := test.new(&buf)
 
 			results := func() []map[string]any {
@@ -64,7 +65,6 @@ func TestHandlerReturnsErrorWhentheWrappedHandlerErrors(t *testing.T) {
 	handler := slogctx.NewHandler(erroringHandler{err: errors.New("some internal error")})
 
 	err := handler.Handle(context.Background(), slog.NewRecord(time.Now(), slog.LevelDebug.Level(), "Some message", 0))
-
 	if err == nil {
 		t.Errorf("no error returned from handler.Handle")
 	}

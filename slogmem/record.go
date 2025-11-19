@@ -79,7 +79,10 @@ func NewLoggedRecords(records []LoggedRecord) *LoggedRecords {
 // convenience helper for logging information in failed tests and similar
 // scenarios.
 func (lr *LoggedRecords) Contains(query RecordQuery) (bool, string) {
-	diff, msgMatchDiff := "", ""
+	var (
+		diff         strings.Builder
+		msgMatchDiff strings.Builder
+	)
 
 	flattenedQuery := flattenRecordQuery(query)
 
@@ -91,17 +94,17 @@ func (lr *LoggedRecords) Contains(query RecordQuery) (bool, string) {
 		recordDiff := cmp.Diff(flattenedQuery, flattenedRecord, cmpOpts()...)
 
 		if lr.records[i].Message == query.Message {
-			msgMatchDiff += fmt.Sprintln(recordDiff)
+			msgMatchDiff.WriteString(fmt.Sprintln(recordDiff))
 		}
 
-		diff += fmt.Sprintln(recordDiff)
+		diff.WriteString(fmt.Sprintln(recordDiff))
 	}
 
-	if msgMatchDiff != "" {
-		return false, msgMatchDiff
+	if msgMatchDiff.Len() > 0 {
+		return false, msgMatchDiff.String()
 	}
 
-	return false, diff
+	return false, diff.String()
 }
 
 // IsEmpty returns true when no records have been captured.
@@ -148,6 +151,7 @@ func (lr *LoggedRecords) append(record LoggedRecord) {
 // flattenRecordQuery is used to flatten a RecordQuery into map for comparison with flattened [LoggedRecords].
 func flattenRecordQuery(recordQuery RecordQuery) map[string]any {
 	const numBaseAttrs = 2
+
 	flattenedRecordQuery := make(map[string]any, numBaseAttrs+len(recordQuery.Attrs))
 
 	flattenedRecordQuery[slog.LevelKey] = recordQuery.Level
