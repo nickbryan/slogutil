@@ -90,6 +90,104 @@ func TestLoggedRecordsAsSliceOfNestedKeyValuePairs(t *testing.T) {
 func TestLoggedRecordsContains(t *testing.T) {
 	t.Parallel()
 
+	testContains(t, "Contains", func(records []slogmem.LoggedRecord, query slogmem.RecordQuery) (bool, string) {
+		return slogmem.NewLoggedRecords(records).Contains(query)
+	})
+
+	t.Run("ignores attrs on the logged record that are not quired by the query", func(t *testing.T) {
+		t.Parallel()
+
+		records := []slogmem.LoggedRecord{
+			{
+				Time:    time.Now(),
+				Level:   slog.LevelInfo,
+				Message: "Some log message",
+				Attrs: []slog.Attr{
+					slog.String("some_key", "some_value"),
+					slog.String("some_ignored_key", "some_ignored_value"),
+					slog.String("some_other_ignored_key", "some_other_ignored_value"),
+					slog.Group("some_group",
+						slog.String("some_group_key", "some_group_value"),
+						slog.String("some_ignored_group_key", "some_ignored_group_value"),
+					),
+					slog.Group("some", slog.Group("nested", slog.String("key", "some_nested_value"))),
+				},
+			},
+		}
+
+		query := slogmem.RecordQuery{
+			Level:   slog.LevelInfo,
+			Message: "Some log message",
+			Attrs: map[string]slog.Value{
+				"some_key":                  slog.StringValue("some_value"),
+				"some_group.some_group_key": slog.StringValue("some_group_value"),
+				"some.nested.key":           slog.StringValue("some_nested_value"),
+			},
+		}
+
+		gotOK, gotDiff := slogmem.NewLoggedRecords(records).Contains(query)
+		if !gotOK {
+			t.Errorf("slogmem.NewLoggedRecords(%+v).Contains(%+v) returned false, diff: %s", records, query, gotDiff)
+		}
+
+		if gotDiff != "" {
+			t.Errorf("slogmem.NewLoggedRecords(%+v).Contains(%+v) returned true, diff: %s", records, query, gotDiff)
+		}
+	})
+}
+
+func TestContainsExact(t *testing.T) {
+	t.Parallel()
+
+	testContains(t, "ContainsExact", func(records []slogmem.LoggedRecord, query slogmem.RecordQuery) (bool, string) {
+		return slogmem.NewLoggedRecords(records).ContainsExact(query)
+	})
+
+	t.Run("fails when there are additional attrs on the logged record that are not quired by the query", func(t *testing.T) {
+		t.Parallel()
+
+		records := []slogmem.LoggedRecord{
+			{
+				Time:    time.Now(),
+				Level:   slog.LevelInfo,
+				Message: "Some log message",
+				Attrs: []slog.Attr{
+					slog.String("some_key", "some_value"),
+					slog.String("some_ignored_key", "some_ignored_value"),
+					slog.String("some_other_ignored_key", "some_other_ignored_value"),
+					slog.Group("some_group",
+						slog.String("some_group_key", "some_group_value"),
+						slog.String("some_ignored_group_key", "some_ignored_group_value"),
+					),
+					slog.Group("some", slog.Group("nested", slog.String("key", "some_nested_value"))),
+				},
+			},
+		}
+
+		query := slogmem.RecordQuery{
+			Level:   slog.LevelInfo,
+			Message: "Some log message",
+			Attrs: map[string]slog.Value{
+				"some_key":                  slog.StringValue("some_value"),
+				"some_group.some_group_key": slog.StringValue("some_group_value"),
+				"some.nested.key":           slog.StringValue("some_nested_value"),
+			},
+		}
+
+		gotOK, gotDiff := slogmem.NewLoggedRecords(records).ContainsExact(query)
+		if gotOK {
+			t.Errorf("slogmem.NewLoggedRecords(%+v).ContainsExact(%+v) returned true, diff: %s", records, query, gotDiff)
+		}
+
+		if gotDiff == "" {
+			t.Errorf("slogmem.NewLoggedRecords(%+v).ContainsExact(%+v) returned false, diff: %s", records, query, gotDiff)
+		}
+	})
+}
+
+func testContains(t *testing.T, method string, contains func(records []slogmem.LoggedRecord, query slogmem.RecordQuery) (bool, string)) {
+	t.Helper()
+
 	t.Run("panics when a slog.GroupValue is used instead of dot notation for accessing nested groups", func(t *testing.T) {
 		t.Parallel()
 
@@ -111,11 +209,11 @@ func TestLoggedRecordsContains(t *testing.T) {
 
 		defer func() {
 			if r := recover(); r == nil {
-				t.Errorf("slogmem.NewLoggedRecords(%+v).Contains(%+v) did not panic when using slog.GroupValue instead of dot notation", records, query)
+				t.Errorf("slogmem.NewLoggedRecords(%+v).%s(%+v) did not panic when using slog.GroupValue instead of dot notation", method, records, query)
 			}
 		}()
 
-		_, _ = slogmem.NewLoggedRecords(records).Contains(query)
+		_, _ = contains(records, query)
 	})
 
 	testCases := map[string]struct {
@@ -479,18 +577,18 @@ func TestLoggedRecordsContains(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, gotDiff := slogmem.NewLoggedRecords(tc.records).Contains(tc.query)
+			got, gotDiff := contains(tc.records, tc.query)
 
 			if got != tc.want {
-				t.Errorf("slogmem.NewLoggedRecords(%+v).Contains(%+v) has not returned expected result:\ngot  %t\nwant %t", tc.records, tc.query, got, tc.want)
+				t.Errorf("slogmem.NewLoggedRecords(%+v).%s(%+v) has not returned expected result:\ngot  %t\nwant %t", method, tc.records, tc.query, got, tc.want)
 			}
 
 			if tc.want == true && gotDiff != "" {
-				t.Errorf("slogmem.NewLoggedRecords(%+v).Contains(%+v) has returned a diff unexpectedly:\ngot  %s\nwant \"\"", tc.records, tc.query, gotDiff)
+				t.Errorf("slogmem.NewLoggedRecords(%+v).%s(%+v) has returned a diff unexpectedly:\ngot  %s\nwant \"\"", method, tc.records, tc.query, gotDiff)
 			}
 
 			if tc.want == false && gotDiff == "" {
-				t.Errorf("slogmem.NewLoggedRecords(%+v).Contains(%+v) has not returned a diff", tc.records, tc.query)
+				t.Errorf("slogmem.NewLoggedRecords(%+v).%s(%+v) has not returned a diff", method, tc.records, tc.query)
 			}
 		})
 	}
@@ -604,7 +702,7 @@ func TestHandlerRespectsCastingLogValuerWhenTestingErrors(t *testing.T) {
 		},
 	}
 
-	if ok, diff := handler.Records().Contains(query); !ok {
+	if ok, diff := handler.Records().ContainsExact(query); !ok {
 		t.Errorf("handler does not respect slog.LogValuer casting, diff:\n%s", diff)
 	}
 }

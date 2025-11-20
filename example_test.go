@@ -73,7 +73,7 @@ func ExampleNewInMemoryLogger() {
 	logger.DebugContext(ctx, "Debug log message") // Not logged due to the level set on the logger.
 	logger.InfoContext(ctx, "Info log message", slog.String("my_grouped_attribute", "my_value"))
 
-	if ok, diff := logs.Contains(slogmem.RecordQuery{
+	if ok, diff := logs.ContainsExact(slogmem.RecordQuery{
 		Level:   slog.LevelInfo,
 		Message: "Info log message",
 		Attrs: map[string]slog.Value{

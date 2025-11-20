@@ -3,6 +3,8 @@ package slogmem
 import (
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -60,14 +62,15 @@ func NewLoggedRecords(records []LoggedRecord) *LoggedRecords {
 	}
 }
 
-// Contains can be used to check if a LoggedRecords contains a
-// [LoggedRecord] that matches the details in the given [RecordQuery].
+// Contains can be used to check if a LoggedRecords contains a [LoggedRecord]
+// that matches the details in the given [RecordQuery].
 //
-// Contains returns true for the first record that fully matches the given
-// [RecordQuery]. If there are no records matching the given query then false
-// will be returned.
+// Contains returns true for the first record that matches the given
+// [RecordQuery]. If there are no records matching the given query, then false
+// will be returned. A loose match is performed on the attributes in the query.
+// Any additional attributes in the record will not be checked.
 //
-// There is an additional argument returned as a convenience helper which
+// There is an additional argument returned as a convenience helper that
 // provides a diff of the passed [RecordQuery] and the [LoggedRecords] when there
 // is no match or a partial match on the message. When Contains returns true, the
 // diff (second return value) will be empty. When there is not a full match on a
@@ -78,33 +81,32 @@ func NewLoggedRecords(records []LoggedRecord) *LoggedRecords {
 // NOTE: this diff is nondeterministic, do not rely on its output. This is a
 // convenience helper for logging information in failed tests and similar
 // scenarios.
-func (lr *LoggedRecords) Contains(query RecordQuery) (bool, string) {
-	var (
-		diff         strings.Builder
-		msgMatchDiff strings.Builder
-	)
+func (lr *LoggedRecords) Contains(query RecordQuery) (ok bool, diff string) {
+	paths := append(slices.Collect(maps.Keys(query.Attrs)), slog.MessageKey, slog.LevelKey)
+	return lr.compare(query, append(cmpOpts(), includePaths(paths))...)
+}
 
-	flattenedQuery := flattenRecordQuery(query)
-
-	for i, flattenedRecord := range lr.AsSliceOfNestedKeyValuePairs() {
-		if cmp.Equal(flattenedQuery, flattenedRecord, cmpOpts()...) {
-			return true, ""
-		}
-
-		recordDiff := cmp.Diff(flattenedQuery, flattenedRecord, cmpOpts()...)
-
-		if lr.records[i].Message == query.Message {
-			msgMatchDiff.WriteString(fmt.Sprintln(recordDiff))
-		}
-
-		diff.WriteString(fmt.Sprintln(recordDiff))
-	}
-
-	if msgMatchDiff.Len() > 0 {
-		return false, msgMatchDiff.String()
-	}
-
-	return false, diff.String()
+// ContainsExact can be used to check if a LoggedRecords contains a
+// [LoggedRecord] that is an exact match of the details in the given
+// [RecordQuery].
+//
+// ContainsExact returns true for the first record that fully matches the given
+// [RecordQuery]. If there are no records matching the given query, then false
+// will be returned. All attributes in the query must be present in the record.
+//
+// There is an additional argument returned as a convenience helper that
+// provides a diff of the passed [RecordQuery] and the [LoggedRecords] when there
+// is no match or a partial match on the message. When ContainsExact returns true, the
+// diff (second return value) will be empty. When there is not a full match on a
+// record but the message matches, a diff will be produced for each record
+// matching that message. Otherwise, a diff over all records that were logged
+// will be produced.
+//
+// NOTE: this diff is nondeterministic, do not rely on its output. This is a
+// convenience helper for logging information in failed tests and similar
+// scenarios.
+func (lr *LoggedRecords) ContainsExact(query RecordQuery) (ok bool, diff string) {
+	return lr.compare(query, cmpOpts()...)
 }
 
 // IsEmpty returns true when no records have been captured.
@@ -146,6 +148,78 @@ func (lr *LoggedRecords) append(record LoggedRecord) {
 	defer lr.mu.Unlock()
 
 	lr.records = append(lr.records, record)
+}
+
+func (lr *LoggedRecords) compare(query RecordQuery, opts ...cmp.Option) (bool, string) {
+	var (
+		diff         strings.Builder
+		msgMatchDiff strings.Builder
+	)
+
+	flattenedQuery := flattenRecordQuery(query)
+
+	for i, flattenedRecord := range lr.AsSliceOfNestedKeyValuePairs() {
+		if cmp.Equal(flattenedQuery, flattenedRecord, opts...) {
+			return true, ""
+		}
+
+		recordDiff := cmp.Diff(flattenedQuery, flattenedRecord, opts...)
+
+		if lr.records[i].Message == query.Message {
+			msgMatchDiff.WriteString(fmt.Sprintln(recordDiff))
+		}
+
+		diff.WriteString(fmt.Sprintln(recordDiff))
+	}
+
+	if msgMatchDiff.Len() > 0 {
+		return false, msgMatchDiff.String()
+	}
+
+	return false, diff.String()
+}
+
+// includePaths returns a cmp.Option that will ignore any paths that do not match the given paths.
+func includePaths(paths []string) cmp.Option { //nolint:ireturn // We need to return a cmp.Option here which is an interface.
+	include := make([][]string, 0, len(paths))
+
+	for _, p := range paths {
+		include = append(include, strings.Split(p, "."))
+	}
+
+	return cmp.FilterPath(func(path cmp.Path) bool {
+		currentPath := pathToStrings(path)
+		if len(currentPath) == 0 {
+			return false
+		}
+
+		for _, pathToInclude := range include {
+			// If the current path is longer than the path to include, it can't be a prefix.
+			if len(currentPath) > len(pathToInclude) {
+				continue
+			}
+
+			// If the current path is a prefix of the path to include, it's a match or a parent, so don't ignore it.
+			if cmp.Equal(currentPath, pathToInclude[:len(currentPath)]) {
+				return false
+			}
+		}
+
+		return true // If we got here, the path is not in the include list, so ignore it.
+	}, cmp.Ignore()) // Filter out the values that do not match the given paths.
+}
+
+// pathToStrings converts a cmp.Path to a slice of strings.
+func pathToStrings(path cmp.Path) []string {
+	var parts []string
+
+	for _, step := range path {
+		if s, ok := step.(cmp.MapIndex); ok {
+			parts = append(parts, s.Key().String())
+		}
+	}
+
+	return parts
 }
 
 // flattenRecordQuery is used to flatten a RecordQuery into map for comparison with flattened [LoggedRecords].

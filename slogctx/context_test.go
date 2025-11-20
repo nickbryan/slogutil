@@ -117,7 +117,7 @@ func TestWithAttrs(t *testing.T) {
 			testCase.log(testCase.ctx, logger)
 
 			records := handler.Records()
-			if ok, diff := records.Contains(testCase.want); !ok {
+			if ok, diff := records.ContainsExact(testCase.want); !ok {
 				t.Errorf("expected logged records to contain: %+v, got: %s", testCase.want, diff)
 			}
 		})
@@ -232,7 +232,7 @@ func TestWithRootAttrs(t *testing.T) {
 			testCase.log(testCase.ctx, logger)
 
 			records := handler.Records()
-			if ok, diff := records.Contains(testCase.want); !ok {
+			if ok, diff := records.ContainsExact(testCase.want); !ok {
 				t.Errorf("expected logged records to contain: %+v, got: %s", testCase.want, diff)
 			}
 		})
